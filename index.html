@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Videmo - Detecção de Expressões Faciais</title>
+
+<link rel="shortcut icon" type="image/x-icon" href="./favicon.ico">
+
+<style>
+
+#wrapper {
+	width:100%;
+}
+
+#content {
+	margin-left:15%;
+}
+
+#v {
+	width:45%;
+	height:auto;
+	float: left;
+	clear:left;
+	padding: 20px;
+}
+
+#c {
+	width:45%;
+	height:auto;
+	float: left;
+	padding: 20px;
+}
+
+#grafico-1 {
+	width:60%;
+	height:300px;
+	padding:20px;
+	float: left;
+	clear:left;	
+}
+
+#container-input-video {
+	clear:left;
+	float:left;
+	margin:20px;
+}
+
+#head-logo {
+	height:200px;
+	width:auto;
+	float:left;
+}
+
+#paragrafo-1 {
+	clear:left;
+	max-width:900px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="wrapper">
+
+<div id="content">
+
+<img id="head-logo" src="./img/logo.png"></img>
+
+<p id="paragrafo-1">Este site identifica em tempo real expressões faciais em vídeos.
+O número do lado de cada emoção detectada representa a probabilidade de que ela esteja certa.
+Devido ao processamento, a taxa de frames por segundo pode ser baixa.</p>
+
+<div id="container-input-video">
+Selecione um arquivo de vídeo: <input type="file" id="input-video" accept="video/*"></input>
+</div>
+
+<div id="video1">
+<video id="v" poster="./img/video-poster.png" controls></video>
+</div>
+
+<div id="video2">
+<canvas id="c"></canvas>
+</div>
+
+<div id="grafico-1"></div>
+
+</div>
+
+</div>
+
+<script src ="./lib/face-api/face-api.js"></script>
+<script src="./lib/canvasjs.min.js"></script>
+
+<script type="module">
+
+import {config,dps} from "./grafico1.js";
+
+var video = document.getElementById("v");
+var inputVideo = document.getElementById("input-video");
+var canvas = document.getElementById("c");
+var ctx = canvas.getContext("2d");
+var ultimoSegundo = 0;
+
+var grafico1 = new CanvasJS.Chart("grafico-1",config);
+grafico1.render(); 
+	
+document.onload = carregarRedesNeurais();
+
+inputVideo.addEventListener("change",() => {
+		var url = URL.createObjectURL(inputVideo.files[0]);
+		video.src = url; 
+	});
+
+video.addEventListener("play",() => {
+		processarFrame();
+	});
+	
+async function carregarRedesNeurais(){
+	await faceapi.loadSsdMobilenetv1Model('/lib/face-api/models');
+	await faceapi.loadFaceExpressionModel('/lib/face-api/models');
+}
+async function processarFrame(){
+
+	if(!(video.paused || video.ended)){
+		ctx.drawImage(video,0,0,canvas.width,canvas.height);
+		let tempo = video.currentTime;
+		
+		let detections = await faceapi.detectAllFaces(canvas)
+								.withFaceExpressions();
+		let dimensions = {width:canvas.width, height:canvas.height};
+		let resizedDetections = faceapi.resizeResults(detections,dimensions);
+		
+		//console.log(detections);
+		if(detections[0]){
+			let expressoes = detections[0].expressions;
+			
+			dps.raiva.push({x:tempo, y:expressoes.angry});
+			dps.nojo.push({x:tempo, y:expressoes.disgusted});
+			dps.medo.push({x:tempo, y:expressoes.fearful});
+			dps.alegria.push({x:tempo, y:expressoes.happy});
+			dps.neutralidade.push({x:tempo, y:expressoes.neutral});
+			dps.tristeza.push({x:tempo, y:expressoes.sad});
+			dps.surpresa.push({x:tempo, y:expressoes.surprised});
+		}
+		
+		grafico1.render();
+		
+		let minProbability = 0.3;
+		faceapi.draw.drawFaceExpressions(canvas, resizedDetections, minProbability);
+	}
+	
+	setTimeout(processarFrame,0);
+}
+
+</script>
+
+</body>
+
+</html>
