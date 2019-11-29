@@ -119,8 +119,8 @@ video.addEventListener("play",() => {
 	});
 	
 async function carregarRedesNeurais(){
-	await faceapi.loadSsdMobilenetv1Model('./lib/face-api/models');
-	await faceapi.loadFaceExpressionModel('./lib/face-api/models');
+	await faceapi.loadSsdMobilenetv1Model('https://github.com/danielr40/videmo/tree/master/lib/face-api/models');
+	await faceapi.loadFaceExpressionModel('https://github.com/danielr40/videmo/tree/master/lib/face-api/models');
 }
 async function processarFrame(){
 
